@@ -121,7 +121,7 @@
                 $invoiceid = checkCbInvoiceID($_POST['idPlataforma'], $GATEWAY["name"]);
                 checkCbTransID($_POST['idPlataforma']);
                 $valor = (float)$valorTotal - $valorOriginal;
-                $taxa = (int) $GATEWAY['taxa'];
+                $taxa = (float) $GATEWAY['taxa'];
                 addInvoicePayment($invoiceid, $_POST['idPlataforma'], $valor, $taxa, 'paghiper');
             }
         }
