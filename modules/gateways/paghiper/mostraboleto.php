@@ -1,5 +1,5 @@
 <?php
-require("../../../dbconnect.php");
+require("../../../init.php");
 	$paramsboleto = $_SESSION['parametros'];
 		
 function httpPost($url,$params)
