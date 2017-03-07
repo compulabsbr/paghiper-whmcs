@@ -6,7 +6,6 @@
             "type" => array("sqltype" => "LIKE", "value" => "client")
         );
         $result = select_query("tblcustomfields", "id,fieldname", $where);
-        $gsmnumber = '';
         while ($data = mysql_fetch_array($result)) {
             $lsdoc[$data['id']] = $data['fieldname'];
         }
@@ -80,6 +79,12 @@
                 'Options' => array("2"=>"2 Dias","3"=>"3 Dias","4"=>"4 Dias","5"=>"5 Dias","6"=>"6 Dias","7"=>"7 Dias"),
                 "Description" => "<br/><small><i class='fa fa-info-circle'></i> Quantos dias somar ao vencimento a partir da data da geração do boleto</small>"
             ),
+            "linha" => array(
+                "FriendlyName" => "Mostrar linha digitável?",
+                'Type' => 'dropdown',
+                'Options' => array("0"=>"Não","1"=>"Sim"),
+                "Description" => "<br/><small><i class='fa fa-info-circle'></i> Será mostrado a linha digitável do boleto na fatura.</small>"
+            ),
         );
     }
     if (basename(__FILE__) == basename($_SERVER['SCRIPT_NAME'])) {
@@ -127,6 +132,23 @@
         }
     }
 
+    function httpPost($url,$params)
+    {
+        $postData = '';
+        foreach($params as $k => $v) { $postData .= $k . '='.$v.'&'; }
+        $postData = rtrim($postData, '&');
+        $ch = curl_init();   
+        curl_setopt($ch,CURLOPT_URL,$url);
+        curl_setopt($ch,CURLOPT_RETURNTRANSFER,true);
+        curl_setopt($ch,CURLOPT_HEADER, false); 
+        curl_setopt($ch, CURLOPT_POST, count($postData));
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); 
+        $output=curl_exec($ch); 
+        curl_close($ch);
+        return $output; 
+    }
+
     function get_tag( $attr, $value, $xml ) {
 
         $attr = preg_quote($attr);
@@ -139,6 +161,7 @@
         $matches);
         return $matches[1];
     }
+
     function paghiper_link($params)
     {
         $query = mysql_query("SELECT duedate FROM tblinvoices WHERE id = '".$params['invoiceid']."';");
@@ -228,13 +251,13 @@
            "nome" => $params['clientdetails']['firstname'].' '.$params['clientdetails']['lastname'], 
            "pagamento" => "pagamento"
         );
-		
-		$_SESSION['parametros'] = $paramsboleto;
-		
+
+        $boleto = httpPost("https://www.paghiper.com/checkout/",$paramsboleto);
+
         $linha1 = get_tag('id', 'DadosBoleto', $boleto);
         $kl1 = strpos($linha1, "{");
         $kl2 = (int)strpos($linha1, "}") - (int)$kl1 + 1;
         $dadosboleto = json_decode(substr($linha1,$kl1,$kl2));
-         return ($params['linha']=="1"?'<div class="form-group"><label><i class="fa fa-keyboard-o"></i> Linha digitável</label><input type="text" id="linha" onfocus="this.select();" onmouseup="return false;" readonly="true" value="'.$dadosboleto->linhaDigitavel.'" class="form-control"></div>':null)."<span onclick='abrirboleto()' class='btn btn-block btn-primary'>".$params['botaopagar']."</span><div class='hidden' id='boleto'>".$boleto."</div><script src='https://code.jquery.com/jquery-1.12.4.min.js'integrity='sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ='crossorigin='anonymous'></script><script src='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js' integrity='sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS' crossorigin='anonymous'></script><script>function abrirboleto(){var w = window.open('/modules/gateways/paghiper/mostraboleto.php', '', 'width=800, height=500, scrollbars=yes');}".($params['abrirauto']==true ? "\$(document).ready(function() {\$('body').html(\$('#boleto').html());});" : null ).'</script>';
-		 }
+        return ($params['linha']=="1"?'<div class="form-group"><label><i class="fa fa-keyboard-o"></i> Linha digitável</label><input type="text" id="linha" onfocus="this.select();" onmouseup="return false;" readonly="true" value="'.$dadosboleto->linhaDigitavel.'" class="form-control"></div>':null)."<span onclick='abrirboleto()' class='btn btn-block btn-primary'>".$params['botaopagar']."</span><div class='hidden' id='boleto'>".$boleto."</div><script src='https://code.jquery.com/jquery-1.12.4.min.js'integrity='sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ='crossorigin='anonymous'></script><script src='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js' integrity='sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS' crossorigin='anonymous'></script><script>function abrirboleto(){var w = window.open('', '', 'width=800, height=500, scrollbars=yes');var html = $('#boleto').html(); $(w.document.body).html(html);}".($params['abrirauto']==true ? "\$(document).ready(function() {\$('body').html(\$('#boleto').html());});" : null ).'</script>';
+    }
 ?>
